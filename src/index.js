@@ -33,6 +33,13 @@ export type CacheMap<K, V> = {
   clear(): any,
 };
 
+export type BatchScheduleResult = {
+  /**
+   * called when the maxBatchSize is reached and the batch was not dispatched yet.
+   */
+  onMaxBatchSizeReached?: () => void,
+};
+
 /**
  * A `DataLoader` creates a public API for loading data from a particular
  * data back-end with unique keys such as the `id` column of a SQL table or
@@ -63,7 +70,7 @@ class DataLoader<K, V, C = K> {
   // Private
   _batchLoadFn: BatchLoadFn<K, V>;
   _maxBatchSize: number;
-  _batchScheduleFn: (() => void) => void;
+  _batchScheduleFn: (() => void) => typeof undefined | BatchScheduleResult;
   _cacheKeyFn: K => C;
   _cacheMap: CacheMap<C, Promise<V>> | null;
   _batch: Batch<K, V> | null;
@@ -103,6 +110,18 @@ class DataLoader<K, V, C = K> {
     const promise = new Promise((resolve, reject) => {
       batch.callbacks.push({ resolve, reject });
     });
+    if (batch.keys.length >= this._maxBatchSize) {
+      // notify the batch scheduler that the max batch size has been reached to schedule the batch early if desired
+      // batch.batchScheduleResult?.onMaxBatchSizeReached?.();
+      if (
+        // eslint-disable-next-line eqeqeq
+        batch.batchScheduleResult != null &&
+        // eslint-disable-next-line eqeqeq
+        batch.batchScheduleResult.onMaxBatchSizeReached != null
+      ) {
+        batch.batchScheduleResult.onMaxBatchSizeReached();
+      }
+    }
 
     // If caching, cache this promise.
     if (cacheMap) {
@@ -267,6 +286,10 @@ type Batch<K, V> = {
     reject: (error: Error) => void,
   }>,
   cacheHits?: Array<() => void>,
+  /**
+   * May be undefined if the batchScheduleFn directly calls the callback to dispatch the batch.
+   */
+  batchScheduleResult?: BatchScheduleResult,
 };
 
 // Private: Either returns the current batch, or creates and schedules a
@@ -284,15 +307,20 @@ function getCurrentBatch<K, V>(loader: DataLoader<K, V, any>): Batch<K, V> {
   }
 
   // Otherwise, create a new batch for this loader.
-  const newBatch = { hasDispatched: false, keys: [], callbacks: [] };
+  const newBatch: Batch<K, V> = {
+    hasDispatched: false,
+    keys: [],
+    callbacks: [],
+  };
 
   // Store it on the loader so it may be reused.
   loader._batch = newBatch;
 
   // Then schedule a task to dispatch this batch of requests.
-  loader._batchScheduleFn(() => {
+  const batchScheduleResult = loader._batchScheduleFn(() => {
     dispatchBatch(loader, newBatch);
   });
+  newBatch.batchScheduleResult = batchScheduleResult;
 
   return newBatch;
 }
