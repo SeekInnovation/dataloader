@@ -60,7 +60,6 @@ declare class DataLoader<K, V, C = K> {
    */
   prime(key: K, value: V | PromiseLike<V> | Error): this;
 
-
   /**
    * The name given to this `DataLoader` instance. Useful for APM tools.
    *
@@ -87,7 +86,7 @@ declare namespace DataLoader {
     /**
      * called when the maxBatchSize is reached and the batch was not dispatched yet.
      */
-    onMaxBatchSizeReached?: () => void,
+    onMaxBatchSizeReached?: () => void;
   };
 
   // Optionally turn off batching or caching or provide a cache key function or a
@@ -114,7 +113,9 @@ declare namespace DataLoader {
      * This function may return an object to react to the {@link maxBatchSize}
      * being reached early, e.g. dispatching the batch immediately.
      */
-    batchScheduleFn?: (callback: () => void) => BatchScheduleResult | undefined;
+    batchScheduleFn?: (
+      callback: () => void,
+    ) => BatchScheduleResult | undefined | void;
 
     /**
      * Default `true`. Set to `false` to disable memoization caching, creating a
