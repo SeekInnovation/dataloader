@@ -38,7 +38,7 @@
     "PATENTS"
   ],
   "devDependencies": {
-    "@babel/cli": "7.7.0",
+    "@babel/cli": "7.28.0",
     "@babel/core": "7.7.2",
     "@babel/node": "7.7.0",
     "@babel/preset-env": "7.7.1",
@@ -49,9 +49,9 @@
     "eslint": "6.6.0",
     "eslint-plugin-prettier": "^3.4.1",
     "flow-bin": "0.112.0",
-    "jest": "24.9.0",
+    "jest": "30.0.5",
     "prettier": "^2.8.3",
-    "sane": "4.1.0"
+    "sane": "5.0.1"
   },
   "publishConfig": {
     "access": "public"
