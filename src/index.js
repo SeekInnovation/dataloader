@@ -256,6 +256,10 @@ class DataLoader<K, V, C = K> {
 // for enqueuing a job to be performed after promise microtasks and before the
 // next macrotask. For browser environments, a macrotask is used (via
 // setImmediate or setTimeout) at a potential performance penalty.
+//
+// Does not react on maxBatchSize being reached early.
+// Waiting one tick is effectively waiting nothing
+// and dispatching the batch early could lead to unexpected behavior.
 const enqueuePostPromiseJob =
   typeof process === 'object' && typeof process.nextTick === 'function'
     ? function (fn) {
@@ -317,10 +321,9 @@ function getCurrentBatch<K, V>(loader: DataLoader<K, V, any>): Batch<K, V> {
   loader._batch = newBatch;
 
   // Then schedule a task to dispatch this batch of requests.
-  const batchScheduleResult = loader._batchScheduleFn(() => {
+  newBatch.batchScheduleResult = loader._batchScheduleFn(() => {
     dispatchBatch(loader, newBatch);
   });
-  newBatch.batchScheduleResult = batchScheduleResult;
 
   return newBatch;
 }
@@ -453,7 +456,7 @@ function getValidMaxBatchSize(options: ?Options<any, any, any>): number {
 // Private
 function getValidBatchScheduleFn(
   options: ?Options<any, any, any>,
-): (() => void) => void {
+): (() => void) => typeof undefined | BatchScheduleResult {
   const batchScheduleFn = options && options.batchScheduleFn;
   if (batchScheduleFn === undefined) {
     return enqueuePostPromiseJob;

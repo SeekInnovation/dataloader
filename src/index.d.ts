@@ -68,7 +68,6 @@ declare class DataLoader<K, V, C = K> {
    */
   name: string | null;
 }
-
 declare namespace DataLoader {
   // If a custom cache is provided, it must be of this type (a subset of ES6 Map).
   export type CacheMap<K, V> = {
@@ -83,6 +82,13 @@ declare namespace DataLoader {
   export type BatchLoadFn<K, V> = (
     keys: ReadonlyArray<K>,
   ) => PromiseLike<ArrayLike<V | Error>>;
+
+  export type BatchScheduleResult = {
+    /**
+     * called when the maxBatchSize is reached and the batch was not dispatched yet.
+     */
+    onMaxBatchSizeReached?: () => void,
+  };
 
   // Optionally turn off batching or caching or provide a cache key function or a
   // custom cache instance.
@@ -104,8 +110,11 @@ declare namespace DataLoader {
      * Default see https://github.com/graphql/dataloader#batch-scheduling.
      * A function to schedule the later execution of a batch. The function is
      * expected to call the provided callback in the immediate future.
+     *
+     * This function may return an object to react to the {@link maxBatchSize}
+     * being reached early, e.g. dispatching the batch immediately.
      */
-    batchScheduleFn?: (callback: () => void) => void;
+    batchScheduleFn?: (callback: () => void) => BatchScheduleResult | undefined;
 
     /**
      * Default `true`. Set to `false` to disable memoization caching, creating a
